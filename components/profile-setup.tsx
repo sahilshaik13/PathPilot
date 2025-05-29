@@ -39,6 +39,19 @@ const predefinedSkills = [
   "Mobile Development",
   "Cloud Computing",
   "DevOps",
+  "Power BI",
+  "Tableau",
+  "Google Analytics",
+  "Digital Marketing",
+  "Content Management Systems (CMS)",
+  "Social Media Marketing",
+  "Public Speaking",
+  "Time Management",
+  "Project Management",
+  "Negotiation",
+  "Financial Modeling",
+  "Data Visualization",
+  "Research Methodologies",
 ]
 
 const interestAreas = [
@@ -54,12 +67,92 @@ const interestAreas = [
   "Blockchain",
   "IoT (Internet of Things)",
   "Machine Learning",
+  "Digital Marketing",
+  "E-commerce",
+  "Social Media Strategy",
+  "Content Creation",
+  "Business Strategy",
+]
+
+const bcomSkills = [
+  "Accounting",
+  "Finance",
+  "Marketing",
+  "Business Management",
+  "Economics",
+  "Statistics",
+  "Business Law",
+  "Human Resource Management",
+  "Entrepreneurship",
+  "Investment Analysis",
+  "Corporate Finance",
+  "Financial Reporting",
+  "Market Research",
+  "Supply Chain Management",
+  "Business Analytics",
+  "Risk Management",
+  "Data Analysis",
+  "Strategic Planning",
+]
+
+const baSkills = [
+  "Communication",
+  "Critical Thinking",
+  "Research",
+  "Creative Writing",
+  "Sociology",
+  "Psychology",
+  "History",
+  "Political Science",
+  "Cultural Studies",
+  "Philosophy",
+  "Qualitative Research",
+  "Quantitative Research",
+  "Public Relations",
+  "Event Planning",
+  "Media Analysis",
+  "Policy Analysis",
+  "Community Engagement",
+  "Grant Writing",
+]
+
+const bcomInterestAreas = [
+  "Corporate Finance",
+  "Investment Banking",
+  "Marketing Strategies",
+  "E-commerce",
+  "Supply Chain Management",
+  "Business Analytics",
+  "Financial Services",
+  "Retail Management",
+  "International Business",
+  "Entrepreneurship",
+]
+
+const baInterestAreas = [
+  "Social Research",
+  "Cultural Analysis",
+  "Public Relations",
+  "Content Creation",
+  "Policy Development",
+  "Community Engagement",
+  "Media Studies",
+  "Human Rights",
+  "Environmental Studies",
+  "Global Studies",
 ]
 
 export function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [customSkill, setCustomSkill] = useState("")
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
+
+  const [selectedBcomSkills, setSelectedBcomSkills] = useState<string[]>([])
+  const [selectedBaSkills, setSelectedBaSkills] = useState<string[]>([])
+
+  const [selectedBcomInterests, setSelectedBcomInterests] = useState<string[]>([])
+  const [selectedBaInterests, setSelectedBaInterests] = useState<string[]>([])
+
   const [formData, setFormData] = useState({
     careerGoals: "",
     experienceLevel: "",
@@ -68,15 +161,38 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const addSkill = (skill: string) => {
-    if (skill && !selectedSkills.includes(skill)) {
-      setSelectedSkills([...selectedSkills, skill])
+  const addSkill = (skill: string, category: "tech" | "bcom" | "ba" = "tech") => {
+    if (!skill) return
+    switch (category) {
+      case "tech":
+        if (!selectedSkills.includes(skill)) {
+          setSelectedSkills([...selectedSkills, skill])
+        }
+        break
+      case "bcom":
+        if (!selectedBcomSkills.includes(skill)) {
+          setSelectedBcomSkills([...selectedBcomSkills, skill])
+        }
+        break
+      case "ba":
+        if (!selectedBaSkills.includes(skill)) {
+          setSelectedBaSkills([...selectedBaSkills, skill])
+        }
+        break
     }
-    setCustomSkill("")
+    if (category === "tech") setCustomSkill("")
   }
 
-  const removeSkill = (skillToRemove: string) => {
-    setSelectedSkills(selectedSkills.filter((skill) => skill !== skillToRemove))
+  const removeSkill = (skill: string) => {
+    setSelectedSkills(selectedSkills.filter((s) => s !== skill))
+  }
+
+  const removeBcomSkill = (skill: string) => {
+    setSelectedBcomSkills(selectedBcomSkills.filter((s) => s !== skill))
+  }
+
+  const removeBaSkill = (skill: string) => {
+    setSelectedBaSkills(selectedBaSkills.filter((s) => s !== skill))
   }
 
   const toggleInterest = (interest: string) => {
@@ -84,6 +200,22 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
       setSelectedInterests(selectedInterests.filter((i) => i !== interest))
     } else {
       setSelectedInterests([...selectedInterests, interest])
+    }
+  }
+
+  const toggleBcomInterest = (interest: string) => {
+    if (selectedBcomInterests.includes(interest)) {
+      setSelectedBcomInterests(selectedBcomInterests.filter((i) => i !== interest))
+    } else {
+      setSelectedBcomInterests([...selectedBcomInterests, interest])
+    }
+  }
+
+  const toggleBaInterest = (interest: string) => {
+    if (selectedBaInterests.includes(interest)) {
+      setSelectedBaInterests(selectedBaInterests.filter((i) => i !== interest))
+    } else {
+      setSelectedBaInterests([...selectedBaInterests, interest])
     }
   }
 
@@ -99,11 +231,24 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
 
       if (!user) throw new Error("No authenticated user")
 
+      // Aggregate all skills and interests
+      const allSkills = [
+        ...selectedSkills,
+        ...selectedBcomSkills,
+        ...selectedBaSkills,
+      ]
+
+      const allInterests = [
+        ...selectedInterests,
+        ...selectedBcomInterests,
+        ...selectedBaInterests,
+      ]
+
       const { error: updateError } = await supabase
         .from("user_information")
         .update({
-          skills: selectedSkills,
-          interests: selectedInterests.join(", "),
+          skills: allSkills,
+          interests: allInterests.join(", "),
           career_goals: formData.careerGoals,
           experience_level: formData.experienceLevel,
           availability_hours_per_week: formData.timeCommitment ? Number.parseInt(formData.timeCommitment) : null,
@@ -142,7 +287,7 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>}
 
-              {/* Skills Section */}
+              {/* Technical Skills Section */}
               <div>
                 <Label className="text-base font-semibold flex items-center gap-2 mb-3">
                   <Lightbulb className="h-4 w-4" />
@@ -172,14 +317,14 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault()
-                          addSkill(customSkill)
+                          addSkill(customSkill, "tech")
                         }
                       }}
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => addSkill(customSkill)}
+                      onClick={() => addSkill(customSkill, "tech")}
                       disabled={!customSkill}
                     >
                       <Plus className="h-4 w-4" />
@@ -202,6 +347,62 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 </div>
               </div>
 
+              {/* BCom Skills Section */}
+              <div>
+                <Label className="text-base font-semibold flex items-center gap-2 mb-3">
+                  <Lightbulb className="h-4 w-4" />
+                  What BCom skills do you currently have?
+                </Label>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {bcomSkills.map((skill) => (
+                      <Button
+                        key={skill}
+                        type="button"
+                        variant={selectedBcomSkills.includes(skill) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() =>
+                          selectedBcomSkills.includes(skill)
+                            ? removeBcomSkill(skill)
+                            : addSkill(skill, "bcom")
+                        }
+                      >
+                        {skill}
+                        {selectedBcomSkills.includes(skill) && <X className="ml-1 h-3 w-3" />}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* BA Skills Section */}
+              <div>
+                <Label className="text-base font-semibold flex items-center gap-2 mb-3">
+                  <Lightbulb className="h-4 w-4" />
+                  What BA skills do you currently have?
+                </Label>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {baSkills.map((skill) => (
+                      <Button
+                        key={skill}
+                        type="button"
+                        variant={selectedBaSkills.includes(skill) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() =>
+                          selectedBaSkills.includes(skill)
+                            ? removeBaSkill(skill)
+                            : addSkill(skill, "ba")
+                        }
+                      >
+                        {skill}
+                        {selectedBaSkills.includes(skill) && <X className="ml-1 h-3 w-3" />}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Interests Section */}
               <div>
                 <Label className="text-base font-semibold mb-3 block">
@@ -218,6 +419,48 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                     >
                       {interest}
                       {selectedInterests.includes(interest) && <X className="ml-1 h-3 w-3" />}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* BCom Interests Section */}
+              <div>
+                <Label className="text-base font-semibold mb-3 block">
+                  What areas of BCom interest you most?
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {bcomInterestAreas.map((interest) => (
+                    <Button
+                      key={interest}
+                      type="button"
+                      variant={selectedBcomInterests.includes(interest) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleBcomInterest(interest)}
+                    >
+                      {interest}
+                      {selectedBcomInterests.includes(interest) && <X className="ml-1 h-3 w-3" />}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* BA Interests Section */}
+              <div>
+                <Label className="text-base font-semibold mb-3 block">
+                  What areas of BA interest you most?
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {baInterestAreas.map((interest) => (
+                    <Button
+                      key={interest}
+                      type="button"
+                      variant={selectedBaInterests.includes(interest) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleBaInterest(interest)}
+                    >
+                      {interest}
+                      {selectedBaInterests.includes(interest) && <X className="ml-1 h-3 w-3" />}
                     </Button>
                   ))}
                 </div>
@@ -273,7 +516,15 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading || selectedSkills.length === 0 || selectedInterests.length === 0}
+                disabled={
+                  loading ||
+                  (selectedSkills.length === 0 &&
+                    selectedBcomSkills.length === 0 &&
+                    selectedBaSkills.length === 0) ||
+                  (selectedInterests.length === 0 &&
+                    selectedBcomInterests.length === 0 &&
+                    selectedBaInterests.length === 0)
+                }
               >
                 {loading ? "Setting up your profile..." : "Complete Profile & Get Recommendations"}
               </Button>
@@ -284,3 +535,4 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     </div>
   )
 }
+
