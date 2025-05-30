@@ -287,11 +287,11 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>}
 
-              {/* Technical Skills Section */}
+              {/* BTech Skills Section */}
               <div>
                 <Label className="text-base font-semibold flex items-center gap-2 mb-3">
                   <Lightbulb className="h-4 w-4" />
-                  What technical skills do you currently have?
+                  What BTech skills do you currently have?
                 </Label>
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">
@@ -308,44 +308,10 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                       </Button>
                     ))}
                   </div>
-
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add custom skill"
-                      value={customSkill}
-                      onChange={(e) => setCustomSkill(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault()
-                          addSkill(customSkill, "tech")
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => addSkill(customSkill, "tech")}
-                      disabled={!customSkill}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {selectedSkills.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-2">Selected Skills:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedSkills.map((skill) => (
-                          <Badge key={skill} variant="secondary" className="flex items-center gap-1">
-                            {skill}
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => removeSkill(skill)} />
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
+
+              <hr className="my-6 border-gray-300" />
 
               {/* BCom Skills Section */}
               <div>
@@ -375,6 +341,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 </div>
               </div>
 
+              <hr className="my-6 border-gray-300" />
+
               {/* BA Skills Section */}
               <div>
                 <Label className="text-base font-semibold flex items-center gap-2 mb-3">
@@ -403,6 +371,52 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 </div>
               </div>
 
+              <hr className="my-6 border-gray-300" />
+
+              {/* Custom Skill Input Section */}
+              <div>
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" />
+                  Add Custom Technical Skills
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add custom skill"
+                    value={customSkill}
+                    onChange={(e) => setCustomSkill(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addSkill(customSkill, "tech")
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addSkill(customSkill, "tech")}
+                    disabled={!customSkill}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {selectedSkills.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium mb-2">Selected Technical Skills:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSkills.map((skill) => (
+                        <Badge key={skill} variant="secondary" className="flex items-center gap-1">
+                          {skill}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => removeSkill(skill)} />
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <hr className="my-6 border-gray-300" />
+
               {/* Interests Section */}
               <div>
                 <Label className="text-base font-semibold mb-3 block">
@@ -423,6 +437,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                   ))}
                 </div>
               </div>
+
+              <hr className="my-6 border-gray-300" />
 
               {/* BCom Interests Section */}
               <div>
@@ -445,6 +461,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                 </div>
               </div>
 
+              <hr className="my-6 border-gray-300" />
+
               {/* BA Interests Section */}
               <div>
                 <Label className="text-base font-semibold mb-3 block">
@@ -465,6 +483,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                   ))}
                 </div>
               </div>
+
+              <hr className="my-6 border-gray-300" />
 
               {/* Career Goals */}
               <div>
