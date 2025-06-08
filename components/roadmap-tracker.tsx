@@ -66,7 +66,15 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
   const [updatingProgress, setUpdatingProgress] = useState(false)
 
   useEffect(() => {
-    fetchProgress()
+    if (selectedPath.id) {
+      fetchProgress().then(() => {
+        // Only sync if the user has already started the roadmap
+        // or we're loading for the first time
+        if (hasStarted || loading) {
+          syncRoadmapWithDatabase()
+        }
+      })
+    }
   }, [selectedPath.id])
 
   const fetchProgress = async () => {
@@ -94,7 +102,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
     }
   }
 
-  const startRoadmap = async () => {
+  const syncRoadmapWithDatabase = async () => {
     try {
       const {
         data: { user },
@@ -102,37 +110,98 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
 
       if (!user) return
 
+      // Fetch current progress from database
+      const { data: existingProgress, error: fetchError } = await supabase
+        .from("roadmap_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("career_path", selectedPath.id)
+
+      if (fetchError) throw fetchError
+
+      // Create a map of existing progress items for easy lookup
+      const existingProgressMap = new Map()
+      existingProgress?.forEach((item) => {
+        const key = `${item.phase_index}-${item.skill_name}`
+        existingProgressMap.set(key, item)
+      })
+
+      // Create entries for items that should exist based on current roadmap
       const progressEntries: any[] = []
+      const existingKeys = new Set()
 
       selectedPath.roadmap.forEach((phase, phaseIndex) => {
-        phase.skills.forEach((skill, skillIdx) => {
-          progressEntries.push({
-            user_id: user.id,
-            career_path: selectedPath.id,
-            phase_index: phaseIndex,
-            skill_name: skill,
-            status: "pending",
-          })
+        // Process skills
+        phase.skills.forEach((skill) => {
+          const key = `${phaseIndex}-${skill}`
+          existingKeys.add(key)
+
+          // If this skill doesn't exist in the database yet, add it
+          if (!existingProgressMap.has(key)) {
+            progressEntries.push({
+              user_id: user.id,
+              career_path: selectedPath.id,
+              phase_index: phaseIndex,
+              skill_name: skill,
+              status: "pending",
+            })
+          }
         })
 
+        // Process projects
         phase.projects.forEach((project) => {
-          progressEntries.push({
-            user_id: user.id,
-            career_path: selectedPath.id,
-            phase_index: phaseIndex,
-            skill_name: `Project: ${project}`,
-            project_name: project,
-            status: "pending",
-          })
+          const key = `${phaseIndex}-Project: ${project}`
+          existingKeys.add(key)
+
+          // If this project doesn't exist in the database yet, add it
+          if (!existingProgressMap.has(key)) {
+            progressEntries.push({
+              user_id: user.id,
+              career_path: selectedPath.id,
+              phase_index: phaseIndex,
+              skill_name: `Project: ${project}`,
+              project_name: project,
+              status: "pending",
+            })
+          }
         })
       })
 
-      const { error } = await supabase.from("roadmap_progress").insert(progressEntries)
+      // Insert new items if any
+      if (progressEntries.length > 0) {
+        const { error: insertError } = await supabase.from("roadmap_progress").insert(progressEntries)
 
-      if (error) throw error
+        if (insertError) throw insertError
+      }
 
-      setHasStarted(true)
+      // Find items that exist in the database but not in the current roadmap (deleted items)
+      const itemsToDelete: number[] = []
+      existingProgress?.forEach((item) => {
+        const key = `${item.phase_index}-${item.skill_name}`
+        if (!existingKeys.has(key)) {
+          itemsToDelete.push(item.id)
+        }
+      })
+
+      // Delete items that no longer exist in the roadmap
+      if (itemsToDelete.length > 0) {
+        const { error: deleteError } = await supabase.from("roadmap_progress").delete().in("id", itemsToDelete)
+
+        if (deleteError) throw deleteError
+      }
+
+      // Refresh progress data after sync
       fetchProgress()
+      setHasStarted((existingProgress && existingProgress.length > 0) || progressEntries.length > 0)
+    } catch (error) {
+      console.error("Error syncing roadmap:", error)
+    }
+  }
+
+  const startRoadmap = async () => {
+    try {
+      await syncRoadmapWithDatabase()
+      setHasStarted(true)
     } catch (error) {
       console.error("Error starting roadmap:", error)
     }
@@ -142,7 +211,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
     phaseIndex: number,
     skillName: string,
     _projectName: string | undefined,
-    newStatus: "pending" | "in_progress" | "completed"
+    newStatus: "pending" | "in_progress" | "completed",
   ) => {
     setUpdatingProgress(true)
     try {
@@ -151,9 +220,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
       } = await supabase.auth.getUser()
       if (!user) return
 
-      const existingItem = progress.find(
-        (p) => p.phase_index === phaseIndex && p.skill_name === skillName
-      )
+      const existingItem = progress.find((p) => p.phase_index === phaseIndex && p.skill_name === skillName)
 
       const updateData: any = {
         status: newStatus,
@@ -166,10 +233,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
 
       if (newStatus === "completed") {
         updateData.completed_at = new Date().toISOString()
-      } else if (
-        (newStatus === "pending" || newStatus === "in_progress") &&
-        existingItem?.completed_at
-      ) {
+      } else if ((newStatus === "pending" || newStatus === "in_progress") && existingItem?.completed_at) {
         updateData.completed_at = null
       }
 
@@ -368,8 +432,8 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                             isPhaseCompleted
                               ? "bg-green-600 text-white"
                               : phaseProgress > 0
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-300 text-gray-600"
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-300 text-gray-600"
                           }`}
                         >
                           {isPhaseCompleted ? <CheckCircle className="h-4 w-4" /> : phaseIndex + 1}
@@ -427,9 +491,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skill, undefined, "in_progress")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skill, undefined, "in_progress")}
                                         disabled={updatingProgress}
                                       >
                                         Start
@@ -438,9 +500,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                     {status === "in_progress" && (
                                       <Button
                                         size="sm"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skill, undefined, "completed")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skill, undefined, "completed")}
                                         disabled={updatingProgress}
                                       >
                                         Complete
@@ -450,9 +510,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skill, undefined, "in_progress")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skill, undefined, "in_progress")}
                                         disabled={updatingProgress}
                                       >
                                         Reopen
@@ -499,9 +557,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skillName, project, "in_progress")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skillName, project, "in_progress")}
                                         disabled={updatingProgress}
                                       >
                                         Start
@@ -510,9 +566,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                     {status === "in_progress" && (
                                       <Button
                                         size="sm"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skillName, project, "completed")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skillName, project, "completed")}
                                         disabled={updatingProgress}
                                       >
                                         Complete
@@ -522,9 +576,7 @@ export function RoadmapTracker({ selectedPath, userInfo, onBack, onSignOut }: Ro
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() =>
-                                          updateItemStatus(phaseIndex, skillName, project, "in_progress")
-                                        }
+                                        onClick={() => updateItemStatus(phaseIndex, skillName, project, "in_progress")}
                                         disabled={updatingProgress}
                                       >
                                         Reopen
