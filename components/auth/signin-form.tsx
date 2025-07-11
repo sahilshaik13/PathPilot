@@ -12,9 +12,10 @@ import { supabase } from "@/lib/supabase"
 interface SigninFormProps {
   onSuccess: () => void
   onSwitchToSignup: () => void
+  onForgotPassword: () => void
 }
 
-export function SigninForm({ onSuccess, onSwitchToSignup }: SigninFormProps) {
+export function SigninForm({ onSuccess, onSwitchToSignup, onForgotPassword }: SigninFormProps) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -80,7 +81,16 @@ export function SigninForm({ onSuccess, onSwitchToSignup }: SigninFormProps) {
             {loading ? "Signing in..." : "Sign In"}
           </Button>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
+            <Button
+              type="button"
+              variant="link"
+              onClick={onForgotPassword}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Forgot your password?
+            </Button>
+
             <Button type="button" variant="link" onClick={onSwitchToSignup} className="text-sm">
               Don't have an account? Sign up
             </Button>

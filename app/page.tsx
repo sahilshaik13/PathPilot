@@ -3,15 +3,36 @@
 import { useState, useEffect } from "react"
 import { SignupForm } from "@/components/auth/signup-form"
 import { SigninForm } from "@/components/auth/signin-form"
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
+import { ResetPasswordForm } from "@/components/auth/reset-password-form"
 import { supabase } from "@/lib/supabase"
 import { ProfileSetup } from "@/components/profile-setup"
 import { CareerNavigator } from "@/components/career-navigator"
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<"signin" | "signup" | "profile-setup" | "app">("signin")
+  const [currentView, setCurrentView] = useState<
+    "signin" | "signup" | "forgot-password" | "reset-password" | "profile-setup" | "app"
+  >("signin")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Check for password reset in URL hash
+    const checkForPasswordReset = () => {
+      const hash = window.location.hash
+      if (hash.includes("access_token") && hash.includes("type=recovery")) {
+        console.log("Password reset detected in URL hash")
+        setCurrentView("reset-password")
+        setLoading(false)
+        return true
+      }
+      return false
+    }
+
+    // If it's a password reset, handle it immediately
+    if (checkForPasswordReset()) {
+      return
+    }
+
     // Check if user is already signed in
     const checkAuth = async () => {
       const {
@@ -56,6 +77,8 @@ export default function Home() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event, session?.user?.email)
+
       if (event === "SIGNED_IN" && session) {
         // When user signs in, check their profile completion
         const { data: userInfo } = await supabase
@@ -130,11 +153,18 @@ export default function Home() {
         </div>
 
         <div className="flex justify-center">
-          {currentView === "signin" ? (
-            <SigninForm onSuccess={handleSigninSuccess} onSwitchToSignup={() => setCurrentView("signup")} />
-          ) : (
+          {currentView === "signin" && (
+            <SigninForm
+              onSuccess={handleSigninSuccess}
+              onSwitchToSignup={() => setCurrentView("signup")}
+              onForgotPassword={() => setCurrentView("forgot-password")}
+            />
+          )}
+          {currentView === "signup" && (
             <SignupForm onSuccess={handleSignupSuccess} onSwitchToSignin={() => setCurrentView("signin")} />
           )}
+          {currentView === "forgot-password" && <ForgotPasswordForm onBack={() => setCurrentView("signin")} />}
+          {currentView === "reset-password" && <ResetPasswordForm />}
         </div>
       </div>
     </div>
