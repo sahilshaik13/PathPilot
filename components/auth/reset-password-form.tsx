@@ -1,40 +1,35 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
 
-export function ResetPasswordForm() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
   const [validating, setValidating] = useState(true)
   const [isValidSession, setIsValidSession] = useState(false)
 
   const router = useRouter()
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
     const checkSession = async () => {
       try {
-        // First, try to get session from URL hash parameters
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const accessToken = hashParams.get("access_token")
         const refreshToken = hashParams.get("refresh_token")
 
         if (accessToken && refreshToken) {
-          // Set the session using the tokens from the URL
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -48,7 +43,6 @@ export function ResetPasswordForm() {
             setError("Invalid or expired reset link. Please request a new password reset.")
           }
         } else {
-          // Fallback to checking existing session
           const {
             data: { session },
             error,
@@ -76,18 +70,10 @@ export function ResetPasswordForm() {
   const validatePassword = (pwd: string): string[] => {
     const errors: string[] = []
 
-    if (pwd.length < 8) {
-      errors.push("Password must be at least 8 characters long")
-    }
-    if (!/(?=.*[a-z])/.test(pwd)) {
-      errors.push("Password must contain at least one lowercase letter")
-    }
-    if (!/(?=.*[A-Z])/.test(pwd)) {
-      errors.push("Password must contain at least one uppercase letter")
-    }
-    if (!/(?=.*\d)/.test(pwd)) {
-      errors.push("Password must contain at least one number")
-    }
+    if (pwd.length < 8) errors.push("Password must be at least 8 characters long")
+    if (!/(?=.*[a-z])/.test(pwd)) errors.push("Password must contain at least one lowercase letter")
+    if (!/(?=.*[A-Z])/.test(pwd)) errors.push("Password must contain at least one uppercase letter")
+    if (!/(?=.*\d)/.test(pwd)) errors.push("Password must contain at least one number")
 
     return errors
   }
@@ -97,14 +83,12 @@ export function ResetPasswordForm() {
     setLoading(true)
     setError("")
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       setLoading(false)
       return
     }
 
-    // Validate password strength
     const passwordErrors = validatePassword(password)
     if (passwordErrors.length > 0) {
       setError(passwordErrors.join(". "))
@@ -119,12 +103,8 @@ export function ResetPasswordForm() {
 
       if (error) throw error
 
-      setSuccess(true)
-
-      // Redirect to sign in after 3 seconds
-      setTimeout(() => {
-        router.push("/")
-      }, 3000)
+      // Immediate redirect to main page
+      window.location.href = "/"
     } catch (err: any) {
       console.error("Password update error:", err)
       setError(err.message)
@@ -165,30 +145,6 @@ export function ResetPasswordForm() {
             </Alert>
             <Button onClick={() => router.push("/")} className="w-full mt-4">
               Go to Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <CardTitle>Password Reset Successful</CardTitle>
-            <CardDescription>Your password has been successfully updated</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertDescription>You will be redirected to the sign in page in a few seconds...</AlertDescription>
-            </Alert>
-            <Button onClick={() => router.push("/")} className="w-full mt-4">
-              Go to Sign In Now
             </Button>
           </CardContent>
         </Card>
@@ -261,7 +217,6 @@ export function ResetPasswordForm() {
               </div>
             </div>
 
-            {/* Password Requirements */}
             <div className="text-sm text-gray-600 dark:text-gray-400">
               <p className="font-medium mb-1">Password requirements:</p>
               <ul className="space-y-1 text-xs">
@@ -282,5 +237,4 @@ export function ResetPasswordForm() {
   )
 }
 
-// Make sure to export as default as well
 export default ResetPasswordForm
